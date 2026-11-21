@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f6ff">
+  <title>Физика вокруг нас — викторина</title>
+
+  <style>
+    :root {
+      --blue: #405bd8;
+      --ink: #1c2440;
+      --muted: #66708a;
+      --line: #e2e7f2;
+      --green: #218455;
+      --red: #bd4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(140deg, #edf3ff, #f8f7ff);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    .card {
+      width: min(100%, 700px);
+      padding: clamp(22px, 5vw, 38px);
+      background: white;
+      border: 1px solid rgba(226, 231, 242, .8);
+      border-radius: 24px;
+      box-shadow: 0 18px 55px rgba(49, 66, 120, .12);
+    }
+
+    .tag {
+      margin: 0 0 8px;
+      color: var(--blue);
+      font-size: .8rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 3rem);
+      line-height: 1.1;
+    }
+
+    .intro {
+      margin: 12px 0 25px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .progress-track {
+      height: 9px;
+      overflow: hidden;
+      background: #edf0f8;
+      border-radius: 99px;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #405bd8, #8b70ed);
+      border-radius: inherit;
+      transition: width .25s ease;
+    }
+
+    h2 {
+      margin: 26px 0 17px;
+      font-size: clamp(1.15rem, 3.5vw, 1.45rem);
+      line-height: 1.45;
+    }
+
+    .answers {
+      display: grid;
+      gap: 11px;
+    }
+
+    .answer {
+      width: 100%;
+      padding: 15px 16px;
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .answer:hover:not(:disabled) {
+      border-color: #9ba9ed;
+      background: #f8f9ff;
+      transform: translateY(-1px);
+    }
+
+    .answer:disabled { cursor: default; }
+
+    .answer.correct {
+      border-color: #71c49b;
+      background: #effaf4;
+    }
+
+    .answer.incorrect {
+      border-color: #e6a0a0;
+      background: #fff3f3;
+    }
+
+    .feedback {
+      min-height: 48px;
+      margin: 17px 0 10px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .feedback strong { color: var(--ink); }
+
+    .button {
+      padding: 13px 20px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--blue);
+      color: white;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .button:hover:not(:disabled) { background: #324bc0; }
+
+    .button:disabled {
+      background: #b7c1df;
+      cursor: not-allowed;
+    }
+
+    .result {
+      padding-top: 24px;
+      text-align: center;
+    }
+
+    .result-score {
+      margin: 16px 0;
+      color: var(--blue);
+      font-size: 3.5rem;
+      font-weight: 850;
+    }
+
+    .result p { line-height: 1.6; }
+
+    .small-note {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <p class="tag">Интерактивная викторина</p>
+    <h1>Физика вокруг нас</h1>
+    <p class="intro">
+      Проверьте, как физика работает в транспорте и смартфонах.
+      Выберите один ответ в каждом вопросе.
+    </p>
+
+    <section id="quiz">
+      <div class="progress-labels">
+        <span id="question-number"></span>
+        <span id="score-label"></span>
+      </div>
+
+      <div class="progress-track" aria-label="Прогресс викторины">
+        <div class="progress-bar" id="progress"></div>
+      </div>
+
+      <h2 id="question"></h2>
+      <div class="answers" id="answers"></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <button class="button" id="next" disabled>Выберите ответ</button>
+    </section>
+
+    <section class="result" id="result" hidden></section>
+
+    <p class="small-note">В каждом вопросе только один правильный ответ.</p>
+  </main>
+
+  <script>
+    const questions = [
+      {
+        text: "Почему автомобиль не останавливается мгновенно после нажатия на тормоз?",
+        options: [
+          "Из-за инерции: движущийся автомобиль стремится продолжать движение",
+          "Из-за света фар",
+          "Из-за работы GPS"
+        ],
+        correct: 0,
+        explanation: "Инерция — это свойство тела сохранять движение. Тормозам и силам трения нужно время, чтобы остановить автомобиль."
+      },
+      {
+        text: "Что может увеличить тормозной путь автомобиля?",
+        options: [
+          "Сухая дорога",
+          "Мокрая или скользкая дорога",
+          "Включённый радиоприёмник"
+        ],
+        correct: 1,
+        explanation: "На скользкой дороге сцепление шин с поверхностью обычно меньше, поэтому автомобилю может понадобиться больше расстояния для остановки."
+      },
+      {
+        text: "Что делает ремень безопасности при резком торможении?",
+        options: [
+          "Увеличивает скорость автомобиля",
+          "Охлаждает салон",
+          "Удерживает пассажира, который из-за инерции продолжал бы двигаться вперёд"
+        ],
+        correct: 2,
+        explanation: "При торможении автомобиль замедляется, а тело пассажира по инерции стремится продолжить движение. Ремень удерживает его."
+      },
+      {
+        text: "Что происходит в электродвигателе?",
+        options: [
+          "Электрическая энергия превращается в механическое вращение",
+          "Свет превращается в топливо",
+          "Радиоволны останавливают колёса"
+        ],
+        correct: 0,
+        explanation: "Электродвигатель использует взаимодействие электрического тока и магнитного поля, чтобы создать вращение."
+      },
+      {
+        text: "Зачем велосипеду нужны передачи?",
+        options: [
+          "Чтобы велосипед стал легче",
+          "Чтобы менять соотношение усилия на педалях и скорости вращения колеса",
+          "Чтобы совсем не крутить педали"
+        ],
+        correct: 1,
+        explanation: "На лёгкой передаче педали крутить проще, что полезно в гору. Высокая передача помогает ехать быстрее, но требует большего усилия."
+      },
+      {
+        text: "Как дорожный радар измеряет скорость автомобиля?",
+        options: [
+          "По цвету автомобиля",
+          "По звуку двигателя",
+          "По изменению частоты отражённых радиоволн"
+        ],
+        correct: 2,
+        explanation: "Радар сравнивает частоту отправленной и отражённой радиоволны. Это изменение связано с движением автомобиля."
+      },
+      {
+        text: "Что помогает GPS-приёмнику определить положение?",
+        options: [
+          "Сигналы нескольких спутников и время их прохождения до приёмника",
+          "Только скорость автомобиля",
+          "Датчик освещённости телефона"
+        ],
+        correct: 0,
+        explanation: "Приёмник оценивает расстояния до спутников по времени прохождения сигналов и использует данные от нескольких спутников для расчёта положения."
+      },
+      {
+        text: "Какой датчик смартфона помогает экрану менять ориентацию?",
+        options: [
+          "Микрофон",
+          "Акселерометр",
+          "Вспышка камеры"
+        ],
+        correct: 1,
+        explanation: "Акселерометр измеряет ускорение и помогает телефону определить, как он повёрнут или движется."
+      }
+    ];
+
+    let current = 0;
+    let score = 0;
+    let answered = false;
+
+    const questionEl = document.getElementById("question");
+    const answersEl = document.getElementById("answers");
+    const feedbackEl = document.getElementById("feedback");
+    const nextBtn = document.getElementById("next");
+    const numberEl = document.getElementById("question-number");
+    const scoreEl = document.getElementById("score-label");
+    const progressEl = document.getElementById("progress");
+    const quizEl = document.getElementById("quiz");
+    const resultEl = document.getElementById("result");
+
+    function showQuestion() {
+      const item = questions[current];
+      answered = false;
+
+      numberEl.textContent = `Вопрос ${current + 1} из ${questions.length}`;
+      scoreEl.textContent = `Правильных: ${score}`;
+      progressEl.style.width = `${(current / questions.length) * 100}%`;
+      questionEl.textContent = item.text;
+      feedbackEl.textContent = "";
+      answersEl.innerHTML = "";
+      nextBtn.disabled = true;
+      nextBtn.textContent = "Выберите ответ";
+
+      item.options.forEach((option, index) => {
+        const button = document.createElement("button");
+        button.className = "answer";
+        button.textContent = `${String.fromCharCode(1040 + index)}) ${option}`;
+        button.addEventListener("click", () => chooseAnswer(index));
+        answersEl.appendChild(button);
+      });
+    }
+
+    function chooseAnswer(selected) {
+      if (answered) return;
+      answered = true;
+
+      const item = questions[current];
+      const buttons = answersEl.querySelectorAll(".answer");
+
+      buttons.forEach((button, index) => {
+        button.disabled = true;
+        if (index === item.correct) button.classList.add("correct");
+        if (index === selected && selected !== item.correct) {
+          button.classList.add("incorrect");
+        }
+      });
+
+      if (selected === item.correct) {
+        score++;
+        feedbackEl.innerHTML = `<strong>Верно!</strong> ${item.explanation}`;
+      } else {
+        feedbackEl.innerHTML = `<strong>Не совсем.</strong> ${item.explanation}`;
+      }
+
+      scoreEl.textContent = `Правильных: ${score}`;
+      nextBtn.disabled = false;
+      nextBtn.textContent =
+        current === questions.length - 1 ? "Узнать результат" : "Следующий вопрос";
+    }
+
+    function showResult() {
+      quizEl.hidden = true;
+      resultEl.hidden = false;
+      progressEl.style.width = "100%";
+
+      let message;
+      if (score >= 7) {
+        message = "Отлично! Вы уверенно замечаете физику вокруг нас.";
+      } else if (score >= 4) {
+        message = "Хорошая работа! Вы верно ответили на большую часть вопросов.";
+      } else {
+        message = "Самое время повторить физику вокруг нас — теперь есть с чего начать!";
+      }
+
+      resultEl.innerHTML = `
+        <h2>Викторина завершена!</h2>
+        <div class="result-score">${score} из ${questions.length}</div>
+        <p>${message}</p>
+        <button class="button" id="restart">Пройти ещё раз</button>
+      `;
+
+      document.getElementById("restart").addEventListener("click", restart);
+    }
+
+    function restart() {
+      current = 0;
+      score = 0;
+      resultEl.hidden = true;
+      quizEl.hidden = false;
+      showQuestion();
+    }
+
+    nextBtn.addEventListener("click", () => {
+      if (!answered) return;
+      if (current < questions.length - 1) {
+        current++;
+        showQuestion();
+      } else {
+        showResult();
+      }
+    });
+
+    showQuestion();
+  </script>
+</body>
+</html>
